@@ -1,6 +1,8 @@
 import { getModel } from "@mariozechner/pi-ai/src/index.ts";
 import { Agent } from "./packages/agent/src/index.ts";
 
+process.loadEnvFile();
+
 // AZURE_OPENAI_API_KEY and AZURE_OPENAI_BASE_URL are picked up automatically
 // Replace "gpt-4o" with whatever model is deployed on your Azure endpoint
 const model = getModel("azure-openai-responses", "gpt-4.1");

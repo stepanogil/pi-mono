@@ -31,7 +31,7 @@ export type AgentMessage = Message | CustomAgentMessages[keyof CustomAgentMessag
 
 **`AgentLoopConfig`**
 The configuration passed to each loop run. Three functions define how the loop transforms messages before each LLM call:
-- `convertToLlm(messages)` - filters/converts `AgentMessage[]` ΓåÆ LLM-compatible `Message[]` (required)
+- `convertToLlm(messages)` - filters/converts `AgentMessage[]` > LLM-compatible `Message[]` (required)
 - `transformContext(messages)` - prunes or injects before `convertToLlm` (optional, e.g. compaction)
 - `getSteeringMessages()` - called after each tool to check if the user interrupted mid-run
 - `getFollowUpMessages()` - called when the agent would stop, to check if there are queued tasks
@@ -60,15 +60,15 @@ Both return an `EventStream<AgentEvent, AgentMessage[]>` - an async iterable tha
 **`runLoop()` - the heart of the package**
 
 ```
-outer while(true):         ΓåÉ continues while follow-up messages arrive
-  inner while(hasToolCalls || pendingMessages):   ΓåÉ one LLM turn per iteration
+outer while(true):         < continues while follow-up messages arrive
+  inner while(hasToolCalls || pendingMessages):   < one LLM turn per iteration
     inject pending steering messages
-    streamAssistantResponse()   ΓåÉ call LLM, stream response
-    if error/abort ΓåÆ stop
-    executeToolCalls()          ΓåÉ run tools in sequence
+    streamAssistantResponse()   < call LLM, stream response
+    if error/abort > stop
+    executeToolCalls()          < run tools in sequence
     check for steering messages after tools
   check for follow-up messages
-  if none ΓåÆ break
+  if none > break
 ```
 
 `Insight`
@@ -79,10 +79,10 @@ outer while(true):         ΓåÉ continues while follow-up messages arrive
 **`streamAssistantResponse()`** - where the type transformation happens:
 ```
 AgentMessage[] 
-  ΓåÆ transformContext()     (prune/inject at AgentMessage level)
-  ΓåÆ convertToLlm()         (filter to LLM-compatible Message[])
-  ΓåÆ streamFn()             (actual HTTP call to provider)
-  ΓåÆ emit message_update events as chunks arrive
+  > transformContext()     (prune/inject at AgentMessage level)
+  > convertToLlm()         (filter to LLM-compatible Message[])
+  > streamFn()             (actual HTTP call to provider)
+  > emit message_update events as chunks arrive
 ```
 
 **`executeToolCalls()`** - runs tool calls *sequentially* (not in parallel) and checks for steering after each one. If the user sends a steering message mid-tool-execution, remaining tool calls are marked as skipped with a `"Skipped due to queued user message."` result.
@@ -112,7 +112,7 @@ Returns an unsubscribe function - the standard pattern for event subscriptions t
 
 **Message flow through `prompt()`:**
 1. Validates `isStreaming` is false (no concurrent calls)
-2. Normalizes input (string ΓåÆ `UserMessage`, `AgentMessage[]` passthrough)
+2. Normalizes input (string > `UserMessage`, `AgentMessage[]` passthrough)
 3. Calls `_runLoop()`, which:
    - Creates an `AbortController`
    - Calls `agentLoop()` or `agentLoopContinue()`
@@ -153,32 +153,33 @@ const agent = new Agent({
 ## The Full Message Journey (Annotated)
 
 ```
-agent.prompt("fix the bug in foo.ts")
-  Γöé
-  Γö£ΓöÇ Creates UserMessage { role: "user", content: [...] }
-  Γö£ΓöÇ Pushes to context.messages
-  Γöé
-  ΓööΓöÇ agentLoop() starts
-       Γöé
-       Γö£ΓöÇ TURN 1: streamAssistantResponse()
-       Γöé    Γö£ΓöÇ transformContext()   ΓåÉ compaction hook (coding-agent adds this)
-       Γöé    Γö£ΓöÇ convertToLlm()      ΓåÉ filter custom messages
-       Γöé    ΓööΓöÇ streamSimple()      ΓåÉ HTTP SSE call to Azure OpenAI
-       Γöé         ΓåÆ emits: message_start, message_update├ùN, message_end
-       Γöé
-       Γö£ΓöÇ LLM responds with toolCall: { name: "bash", args: { cmd: "..." } }
-       Γöé
-       Γö£ΓöÇ executeToolCalls()
-       Γöé    Γö£ΓöÇ validateToolArguments()
-       Γöé    Γö£ΓöÇ tool.execute(...)    ΓåÉ actual bash execution
-       Γöé    Γö£ΓöÇ emits: tool_execution_start, tool_execution_end
-       Γöé    ΓööΓöÇ pushes ToolResultMessage to context
-       Γöé
-       Γö£ΓöÇ TURN 2: streamAssistantResponse()  ΓåÉ loops back with tool result
-       Γöé    ΓööΓöÇ LLM responds with text (no more tool calls)
-       Γöé
-       ΓööΓöÇ agent_end emitted, loop exits
-```
+ agent.prompt("fix the bug in foo.ts")
+    │
+    ├─ Creates UserMessage { role: "user", content: [...] }
+    ├─ Pushes to context.messages
+    │
+    └─ agentLoop() starts
+         │
+         ├─ TURN 1: streamAssistantResponse()
+         │    ├─ transformContext()   ← compaction hook (coding-agent adds this)
+         │    ├─ convertToLlm()      ← filter custom messages
+         │    └─ streamSimple()      ← HTTP SSE call to Azure OpenAI
+         │         → emits: message_start, message_update×N, message_end
+         │
+         ├─ LLM responds with toolCall: { name: "bash", args: { cmd: "..." } }
+         │
+         ├─ executeToolCalls()
+         │    ├─ validateToolArguments()
+         │    ├─ tool.execute(...)    ← actual bash execution
+         │    ├─ emits: tool_execution_start, tool_execution_end
+         │    └─ pushes ToolResultMessage to context
+         │
+         ├─ TURN 2: streamAssistantResponse()  ← loops back with tool result
+         │    └─ LLM responds with text (no more tool calls)
+         │
+         └─ agent_end emitted, loop exits
+
+  ---
 
 ---
 
