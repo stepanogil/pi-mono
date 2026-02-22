@@ -1,8 +1,14 @@
 # Development Rules
 
+## User Context
+
+The user's goal is to **understand and explore** the codebase, not to extend, modify, or build new features. Tailor explanations to an intermediate-level JavaScript/TypeScript/Node.js developer. Prioritize clear, thorough explanations that explain how and why things work over brief or highly condensed answers. Avoid assuming advanced expertise, but do not oversimplify core concepts.
+
+Do not propose code changes unless explicitly asked. When asked about a piece of code, explain the intent, the patterns used, and how it connects to the broader architecture.
+
 ## First Message
 If the user did not give you a concrete task in their first message,
-read README.md, then ask which module(s) to work on. Based on the answer, read the relevant README.md files in parallel.
+read README.md, then ask which module(s) they want to explore. Based on the answer, read the relevant README.md files in parallel.
 - packages/ai/README.md
 - packages/tui/README.md
 - packages/agent/README.md
@@ -80,7 +86,7 @@ tmux kill-session -t pi-test
 ```
 
 ## Style
-- Keep answers short and concise
+- Prioritize thorough, educational explanations over brevity — this user is here to learn
 - No emojis in commits, issues, PR comments, or code
 - No fluff or cheerful filler text
 - Technical prose only, be kind but direct (e.g., "Thanks @user" not "Thanks so much @user!")
